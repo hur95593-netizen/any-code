@@ -1,0 +1,21 @@
+{
+  "name": "any-code",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "基于 Vue 3 + Vite 的单页面应用",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "smoke": "node scripts/smoke-render.mjs"
+  },
+  "dependencies": {
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vite": "^5.4.11"
+  }
+}
