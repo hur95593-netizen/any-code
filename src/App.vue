@@ -7,6 +7,7 @@ import { RouterLink, RouterView } from 'vue-router'
     <h1 class="logo">any-code</h1>
     <nav class="nav">
       <RouterLink to="/">首页</RouterLink>
+      <RouterLink to="/sort">排序演示</RouterLink>
       <RouterLink to="/about">关于</RouterLink>
     </nav>
   </header>

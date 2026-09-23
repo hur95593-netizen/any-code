@@ -28,9 +28,12 @@ vite.config.js        构建配置,别名 @ 指向 src
 src/
 ├── main.js           应用入口,装配 router 后挂载到 #app
 ├── App.vue           根组件:页头导航 + <RouterView> + 页脚
-├── router/index.js   路由表,history 模式,含 404 兜底
+├── router/
+│   ├── routes.js     路由表(应用、单元测试、冒烟脚本共用这一份)
+│   └── index.js      用 web history 创建路由实例
 ├── api/http.js       请求层:拼地址、超时控制、错误归一成 ApiError
-├── views/            页面级组件(Home、About、NotFound)
+├── utils/bars.js     排序演示页的纯逻辑:生成、打乱、排序矩形
+├── views/            页面级组件(Home、Sort、About、NotFound)
 ├── components/       可复用组件
 └── assets/main.css   全局样式与 CSS 变量(含深色模式)
 scripts/
@@ -44,7 +47,7 @@ vitest.config.js      测试配置,复用 vite.config.js 的插件与别名
 
 - 页面放 `src/views`,可复用组件放 `src/components`,统一用 `<script setup>` 组合式 API。
 - 引用内部模块用别名 `@`,例如 `import Foo from '@/components/Foo.vue'`,不写多层相对路径。
-- 新增路由时同步更新 `src/router/index.js`;除首页外的页面用 `() => import(...)` 懒加载。
+- 新增路由只改 `src/router/routes.js` 一处,测试与冒烟脚本自动跟上;除首页外的页面用 `() => import(...)` 懒加载。
 - 调接口统一走 `@/api/http.js`,失败一律是 `ApiError`(带 `status`、`code`、`data`),不要在组件里散落 `res.ok` 判断。
 - 部署时服务端需把未匹配的路径回退到 `index.html`,否则刷新子路由会 404(history 模式的固有要求)。
 - `node_modules/` 与 `dist/` 不入库,`package-lock.json` 入库以保证依赖可复现。
