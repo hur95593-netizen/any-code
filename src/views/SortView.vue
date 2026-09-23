@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue'
 
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { createBars, isSorted, shuffleBars, sortBars } from '@/utils/bars'
 
 const BAR_COUNT = 16
@@ -23,12 +24,36 @@ function play(next) {
   }, DURATION)
 }
 
-function onSort() {
-  play(sortBars(bars.value))
+// 两个按钮都先弹框确认,点「确定」才真正执行
+const ACTIONS = {
+  sort: {
+    title: '确认排序',
+    message: '将把矩形按高度从小到大排列。',
+    run: () => play(sortBars(bars.value)),
+  },
+  reset: {
+    title: '确认重置',
+    message: '将重新随机打乱矩形的顺序。',
+    run: () => play(shuffleBars(bars.value)),
+  },
 }
 
-function onReset() {
-  play(shuffleBars(bars.value))
+// 正在等待确认的操作:'sort' | 'reset' | null
+const pending = ref(null)
+const pendingAction = computed(() => (pending.value ? ACTIONS[pending.value] : null))
+
+function ask(name) {
+  pending.value = name
+}
+
+function onConfirm() {
+  const action = pendingAction.value
+  pending.value = null
+  action?.run()
+}
+
+function onCancel() {
+  pending.value = null
 }
 
 onBeforeUnmount(() => clearTimeout(timer))
@@ -47,8 +72,8 @@ function barStyle(bar) {
     <h2>排序演示</h2>
 
     <div class="toolbar">
-      <button type="button" data-test="sort" :disabled="animating || sorted" @click="onSort">排序</button>
-      <button type="button" data-test="reset" :disabled="animating" @click="onReset">重置</button>
+      <button type="button" data-test="sort" :disabled="animating || sorted" @click="ask('sort')">排序</button>
+      <button type="button" data-test="reset" :disabled="animating" @click="ask('reset')">重置</button>
       <span class="status" aria-live="polite">{{ sorted ? '已从小到大排好' : '乱序' }}</span>
     </div>
 
@@ -62,6 +87,14 @@ function barStyle(bar) {
         :aria-label="`高度 ${bar.height}`"
       />
     </TransitionGroup>
+
+    <ConfirmDialog
+      :open="pending !== null"
+      :title="pendingAction?.title"
+      :message="pendingAction?.message"
+      @confirm="onConfirm"
+      @cancel="onCancel"
+    />
   </section>
 </template>
 

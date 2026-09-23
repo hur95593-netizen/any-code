@@ -7,6 +7,12 @@ import SortView from '../SortView.vue'
 const heights = (wrapper) => wrapper.findAll('.bar').map((li) => Number(li.attributes('data-height')))
 const isAscending = (list) => list.every((h, i) => i === 0 || list[i - 1] <= h)
 
+/** 点按钮后在确认框里点「确定」,等同于用户完成一次操作。 */
+async function clickAndConfirm(wrapper, name) {
+  await wrapper.find(`[data-test="${name}"]`).trigger('click')
+  await wrapper.find('[data-test="confirm-ok"]').trigger('click')
+}
+
 describe('SortView', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -29,7 +35,7 @@ describe('SortView', () => {
   it('点击排序后按从小到大排列', async () => {
     const wrapper = mount(SortView)
 
-    await wrapper.find('[data-test="sort"]').trigger('click')
+    await clickAndConfirm(wrapper, 'sort')
 
     expect(isAscending(heights(wrapper))).toBe(true)
     expect(wrapper.find('.status').text()).toBe('已从小到大排好')
@@ -40,7 +46,7 @@ describe('SortView', () => {
     const sortBtn = wrapper.find('[data-test="sort"]')
     const resetBtn = wrapper.find('[data-test="reset"]')
 
-    await sortBtn.trigger('click')
+    await clickAndConfirm(wrapper, 'sort')
     expect(sortBtn.attributes('disabled')).toBeDefined()
     expect(resetBtn.attributes('disabled')).toBeDefined()
 
@@ -54,9 +60,9 @@ describe('SortView', () => {
     const wrapper = mount(SortView)
     const before = [...heights(wrapper)].sort((a, b) => a - b)
 
-    await wrapper.find('[data-test="sort"]').trigger('click')
+    await clickAndConfirm(wrapper, 'sort')
     await vi.advanceTimersByTimeAsync(600)
-    await wrapper.find('[data-test="reset"]').trigger('click')
+    await clickAndConfirm(wrapper, 'reset')
 
     const after = heights(wrapper)
     expect(isAscending(after)).toBe(false)
@@ -77,16 +83,56 @@ describe('SortView', () => {
     const firstBar = wrapper.find('.bar').element
     const heightOfFirst = firstBar.dataset.height
 
-    await wrapper.find('[data-test="sort"]').trigger('click')
+    await clickAndConfirm(wrapper, 'sort')
 
     // 同一个 DOM 节点被移动而不是销毁重建,这是位移动画成立的前提
     const same = wrapper.findAll('.bar').find((li) => li.attributes('data-height') === heightOfFirst)
     expect(same.element).toBe(firstBar)
   })
 
+  it('点击排序先弹确认框,此时顺序不变;确定后才排序并关闭弹框', async () => {
+    const wrapper = mount(SortView)
+    const before = heights(wrapper)
+
+    await wrapper.find('[data-test="sort"]').trigger('click')
+    const dialog = wrapper.find('[role="dialog"]')
+    expect(dialog.exists()).toBe(true)
+    expect(dialog.text()).toContain('确认排序')
+    expect(heights(wrapper)).toEqual(before)
+
+    await wrapper.find('[data-test="confirm-ok"]').trigger('click')
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+    expect(isAscending(heights(wrapper))).toBe(true)
+  })
+
+  it('点击重置弹出的是重置的确认文案', async () => {
+    const wrapper = mount(SortView)
+
+    await wrapper.find('[data-test="reset"]').trigger('click')
+    expect(wrapper.find('[role="dialog"]').text()).toContain('确认重置')
+  })
+
+  it.each([
+    ['点取消', (w) => w.find('[data-test="confirm-cancel"]').trigger('click')],
+    ['点遮罩', (w) => w.find('[data-test="confirm-overlay"]').trigger('click')],
+    ['按 Esc', (w) => w.find('[data-test="confirm-ok"]').trigger('keydown', { key: 'Escape' })],
+  ])('%s 关闭弹框且不执行操作', async (_, dismiss) => {
+    const wrapper = mount(SortView)
+    const before = heights(wrapper)
+
+    for (const name of ['sort', 'reset']) {
+      await wrapper.find(`[data-test="${name}"]`).trigger('click')
+      await dismiss(wrapper)
+      expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+      expect(heights(wrapper)).toEqual(before)
+      // 没有进入动画,按钮仍可用
+      expect(wrapper.find(`[data-test="${name}"]`).attributes('disabled')).toBeUndefined()
+    }
+  })
+
   it('卸载时清掉动画定时器', async () => {
     const wrapper = mount(SortView)
-    await wrapper.find('[data-test="sort"]').trigger('click')
+    await clickAndConfirm(wrapper, 'sort')
 
     wrapper.unmount()
     expect(vi.getTimerCount()).toBe(0)
