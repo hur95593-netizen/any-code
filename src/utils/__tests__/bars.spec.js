@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { createBars, isSorted, shuffleBars, sortBars } from '../bars.js'
 
@@ -67,6 +67,43 @@ describe('sortBars', () => {
   it('对已排序的数组幂等', () => {
     const bars = sortBars(createBars(16, { random: seeded(7) }))
     expect(sortBars(bars)).toEqual(bars)
+  })
+
+  it('随机输入与参照排序结果一致(含重复高度、不同长度)', () => {
+    const random = seeded(13)
+    for (let round = 0; round < 300; round++) {
+      const length = Math.floor(random() * 40)
+      // 高度只取 1..10,长数组里必然有重复,覆盖分区时等于基准的分支
+      const bars = Array.from({ length }, (_, id) => ({ id, height: 1 + Math.floor(random() * 10) }))
+
+      const sorted = sortBars(bars)
+
+      expect(heights(sorted)).toEqual(heights(bars).sort((a, b) => a - b))
+      expect([...ids(sorted)].sort((a, b) => a - b)).toEqual(ids(bars))
+    }
+  })
+
+  it('逆序、全相同、空数组与单元素', () => {
+    const reversed = Array.from({ length: 50 }, (_, id) => ({ id, height: 50 - id }))
+    expect(heights(sortBars(reversed))).toEqual(Array.from({ length: 50 }, (_, i) => i + 1))
+
+    const same = Array.from({ length: 8 }, (_, id) => ({ id, height: 30 }))
+    expect(heights(sortBars(same))).toEqual(Array(8).fill(30))
+
+    const one = [{ id: 0, height: 10 }]
+    expect(sortBars([])).toEqual([])
+    expect(sortBars(one)).toEqual(one)
+    expect(sortBars(one)).not.toBe(one)
+  })
+
+  it('不借助 Array.prototype.sort', () => {
+    const spy = vi.spyOn(Array.prototype, 'sort')
+    try {
+      sortBars(createBars(16, { random: seeded(21) }))
+      expect(spy).not.toHaveBeenCalled()
+    } finally {
+      spy.mockRestore()
+    }
   })
 })
 

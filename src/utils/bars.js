@@ -42,14 +42,57 @@ export function shuffleBars(bars, random = Math.random) {
   return bars.slice().reverse()
 }
 
-/** 按高度从小到大排序,返回新数组。 */
+/**
+ * 按高度从小到大排序,返回新数组。
+ * 用快速排序(取中间元素为基准 + Hoare 分区),已排好或逆序的输入也不会退化成 O(n²)。
+ * 快排不稳定:高度相同的矩形相对顺序可能互换,页面上高度两两不同,不受影响。
+ */
 export function sortBars(bars) {
-  return bars.slice().sort((a, b) => a.height - b.height)
+  const items = bars.slice()
+  quickSort(items, 0, items.length - 1)
+  return items
 }
 
 /** 是否已按高度从小到大排好。 */
 export function isSorted(bars) {
   return bars.every((bar, i) => i === 0 || bars[i - 1].height <= bar.height)
+}
+
+/** 原地快速排序 items[lo..hi](闭区间),按 height 升序。 */
+function quickSort(items, lo, hi) {
+  while (lo < hi) {
+    const p = partition(items, lo, hi)
+    // 先递归较短的一侧、较长的一侧用循环处理,递归深度不超过 log n
+    if (p - lo < hi - p) {
+      quickSort(items, lo, p)
+      lo = p + 1
+    } else {
+      quickSort(items, p + 1, hi)
+      hi = p
+    }
+  }
+}
+
+/**
+ * Hoare 分区:以中间元素的高度为基准,返回 p,
+ * 使 items[lo..p] 都不高于基准、items[p+1..hi] 都不低于基准,且两侧都非空。
+ */
+function partition(items, lo, hi) {
+  const pivot = items[Math.floor((lo + hi) / 2)].height
+  let i = lo - 1
+  let j = hi + 1
+  for (;;) {
+    do {
+      i++
+    } while (items[i].height < pivot)
+    do {
+      j--
+    } while (items[j].height > pivot)
+    if (i >= j) {
+      return j
+    }
+    ;[items[i], items[j]] = [items[j], items[i]]
+  }
 }
 
 /** 原地 Fisher–Yates 洗牌,每种排列等概率。 */
